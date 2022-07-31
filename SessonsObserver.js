@@ -1,5 +1,5 @@
 const EventEmitter = require('events').EventEmitter;
-const DEBUG = false;
+const DEBUG = true;
 
 class SessonsObserver  extends EventEmitter {
     constructor(neos){

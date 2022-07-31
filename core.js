@@ -17,22 +17,63 @@ const client = new Client({ intents: [
         Partials.Channel,
         Partials.Reaction
     ] });
-const userList = require("./userList.json");
 const targetMap = require("./targetMap.json")
 const fs = require("fs")
-_userList = new Set(userList);
-_targetMap = new Map(targetMap);
+_targetMap = {...targetMap};
 const EventEmitter = require('events').EventEmitter;
 const commend = new EventEmitter();
 const DEBUG = false;
 
-function addUser(user){
-    _userList.add(user);
-    fs.writeFileSync("./userList.json", JSON.stringify(Array.from(_userList)));
+function listToString(list, p){
+    let res = "";
+    list.forEach(e => {
+        res += e+p;
+    })
+    return res.slice(0, -p.length);
 }
-function removeUser(user){
-    _userList.delete(user);
-    fs.writeFileSync("./userList.json", JSON.stringify(Array.from(_userList)));
+
+function addUser(user, arg){
+    let res = [];
+    if(!arg[0])
+        return res;
+    arg.forEach((al) => {
+        if(al in alias){
+            if(user in _targetMap){
+                if(!_targetMap[user].includes(al)){
+                    _targetMap[user].push(al);
+                }
+                res.push(al);
+            }
+            else{
+                _targetMap[user] = [al];
+                res.push(al);
+            }
+        }
+    });
+    fs.writeFileSync("./targetMap.json", JSON.stringify(_targetMap));
+    
+    return res;
+}
+function removeUser(user, arg){
+    let res = [];
+    if(user in _targetMap){
+        if(arg.length > 0){
+            arg.forEach((al) => {
+                let i = _targetMap[user].findIndex(e => e==al)
+                if(i != -1){
+                    _targetMap[user].splice(i, 1);;
+                    res.push(al);
+                }
+            });
+        }
+        else{
+            res = [..._targetMap[user]];
+            delete _targetMap[user];
+        }
+    }
+    fs.writeFileSync("./targetMap.json", JSON.stringify(Array.from(_targetMap)));
+
+    return res;
 }
 
 neos.on("login",(obj) => {
@@ -73,15 +114,19 @@ function  sendSessonInfo(userid, sesson){
 
 so.on("detectNewTarget",(sesson) => {
     //if(DEBUG)console.log(sesson);
-    
-    alias['newbie-kr'].forEach((tname) => {
-        if(tname == sesson.Name){
-            _userList.forEach((userid) =>
-            {
-                sendSessonInfo(userid, sesson);
-            });
-        }
-    });
+
+    for(al in alias){
+        alias[al].forEach((tname) => {
+            if(tname == sesson.Name){
+                for(userid in _targetMap){
+                    if(_targetMap[userid].includes(al))
+                    {
+                        sendSessonInfo(userid, sesson);
+                    }
+                }
+            }
+        });
+    }
 });
 
 client.on('ready', () => {
@@ -95,28 +140,59 @@ client.on('ready', () => {
 });
 
 client.on("messageCreate", message => {
-    if(message.content.length > 0){
-        if(message.content.charAt(0) == "/")
-        {
-            let arg = message.content.substr(1).split(" ");
-            if(arg.length > 0){
-                if(DEBUG)console.log(message.author.tag+" : "+message.content);
-                commend.emit(arg[0], arg, message);
+    if(message.author.id != client.user.id)
+    {
+        if(message.content.length > 0){
+            if(message.content.charAt(0) == "/")
+            {
+                let arg = message.content.substr(1).split(" ");
+                arg = arg.filter((e) => e != '');
+                if(arg.length > 0){
+                    if(DEBUG)console.log(message.author.tag+" : "+message.content);
+                    commend.emit(arg[0], arg, message);
+                }
             }
         }
     }
 });
 
+function help_alias(){
+    return listToString(Object.keys(alias)," | ");
+}
+
+commend.on("target",  (arg, message) => {
+    message.author.id in _targetMap ?
+    message.reply(`[ ${listToString(_targetMap[message.author.id], ", ")} ]`):
+    message.reply(`undefind`);
+
+})
+
 commend.on("add", (arg, message) => {
-    addUser(message.author.id);
-    message.reply("added UserList")
-    console.log("addUser: "+message.author.tag);
+    let res = addUser(message.author.id, arg.slice(1));
+    if(res.length > 0){
+        message.reply("added: [ "+listToString(res, ", ")+" ]");
+        console.log(message.author.tag+"->added: [ "+listToString(res, ", ")+" ]");
+    }
+    else{
+        let msg = new EmbedBuilder()
+        .setColor(0x0000ff).
+        setDescription(`\`\`\`/${arg[0]} [ ${help_alias()} ]\`\`\``);
+        for(key in alias){
+            msg.addFields({ name: key, value: listToString(alias[key],"\n"), inline: true })
+        }
+        message.reply({ embeds: [msg]});
+    }
 });
 
 commend.on("remove", (arg, message) => {
-    removeUser(message.author.id);
-    message.reply("removed UserList")
-    console.log("removeUser: "+message.author.tag);
+    let res = removeUser(message.author.id, arg.slice(1));
+    if(res.length > 0){
+        message.reply("removed: [ "+listToString(res, ", ")+" ]");
+        console.log(message.author.tag+"->removed: [ "+listToString(res, ", ")+" ]");
+    }
+    else{
+        message.reply(`undefind`);
+    }
 });
 
 client.login(config.Discord.token);
