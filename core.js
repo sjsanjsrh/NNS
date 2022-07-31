@@ -24,7 +24,7 @@ _userList = new Set(userList);
 _targetMap = new Map(targetMap);
 const EventEmitter = require('events').EventEmitter;
 const commend = new EventEmitter();
-const DEBUG = true;
+const DEBUG = false;
 
 function addUser(user){
     _userList.add(user);
@@ -41,38 +41,46 @@ neos.on("login",(obj) => {
     so.observe(3000);
 });
 
+function sendSessonInfo(userid, sesson){
+    client.users.fetch(userid, false).then((user) => {
+        neos.GetUser(sesson.HostUserId).then((Neosuser) => {
+            let icon = Neosuser.Profile.IconUrl ?
+                neos.NeosDBToHttp(Neosuser.Profile.IconUrl, null) : 
+                "https://upload.wikimedia.org/wikipedia/commons/5/55/Neos_VR_Logo.png";
+            let sessonName = sesson.Name;
+            let userName = sesson.HostUsername;
+            let thumbnail = sesson.Thumbnail ? 
+                neos.NeosDBToHttp(sesson.Thumbnail, null) : 
+                "https://upload.wikimedia.org/wikipedia/commons/5/55/Neos_VR_Logo.png";
+            let time = sesson.SessionBeginTime;
+            let urls = "";
+            sesson.SessionURLs.forEach((url) => urls += "```"+url + "```\n");
+            let msg = new EmbedBuilder()
+                .setColor(0x00ff00)
+                .setTitle(sessonName)
+                .setAuthor({ name: userName, iconURL: icon})
+                .setDescription(urls)
+                .setThumbnail(thumbnail)
+                .setTimestamp(new Date(time))
+                try {
+                    user.send({ embeds: [msg]});
+                } catch (error) {
+                    console.error(error);
+                }
+        });
+    });
+}
 
 so.on("detectNewTarget",(sesson) => {
-    if(DEBUG)console.log(sesson);
-    _userList.forEach(member =>
-    {
-        client.users.fetch(member, false).then((user) => {
-            neos.GetUser(sesson.HostUserId).then((Neosuser) => {
-                let icon = Neosuser.Profile.IconUrl ?
-                    neos.NeosDBToHttp(Neosuser.Profile.IconUrl, null) : 
-                    "https://upload.wikimedia.org/wikipedia/commons/5/55/Neos_VR_Logo.png";
-                let sessonName = sesson.Name;
-                let userName = sesson.HostUsername;
-                let thumbnail = sesson.Thumbnail ? 
-                    neos.NeosDBToHttp(sesson.Thumbnail, null) : 
-                    "https://upload.wikimedia.org/wikipedia/commons/5/55/Neos_VR_Logo.png";
-                let time = sesson.SessionBeginTime;
-                let urls = "";
-                sesson.SessionURLs.forEach((url) => urls += "```"+url + "```\n");
-                let msg = new EmbedBuilder()
-                    .setColor(0x00ff00)
-                    .setTitle(sessonName)
-                    .setAuthor({ name: userName, iconURL: icon})
-                    .setDescription(urls)
-                    .setThumbnail(thumbnail)
-                    .setTimestamp(new Date(time))
-                    try {
-                        user.send({ embeds: [msg]});
-                    } catch (error) {
-                        console.error(error);
-                    }
+    //if(DEBUG)console.log(sesson);
+    
+    alias['newbie-kr'].forEach((tname) => {
+        if(tname == sesson.Name){
+            _userList.forEach((userid) =>
+            {
+                sendSessonInfo(userid, sesson);
             });
-        });
+        }
     });
 });
 
@@ -87,12 +95,12 @@ client.on('ready', () => {
 });
 
 client.on("messageCreate", message => {
-    if(DEBUG)console.log(message);
     if(message.content.length > 0){
         if(message.content.charAt(0) == "/")
         {
             let arg = message.content.substr(1).split(" ");
             if(arg.length > 0){
+                if(DEBUG)console.log(message.author.tag+" : "+message.content);
                 commend.emit(arg[0], arg, message);
             }
         }

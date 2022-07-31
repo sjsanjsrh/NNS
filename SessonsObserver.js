@@ -1,17 +1,18 @@
 const EventEmitter = require('events').EventEmitter;
-const DEBUG = true;
+const DEBUG = false;
 
 class SessonsObserver  extends EventEmitter {
-    constructor(neos, target_name){
+    constructor(neos){
         super();
         this.neos = neos;
-        this.target_name = target_name;
         this.Priv_sessons = [];
         this.intervalId = null;
+        this.ignore_emit = false;
     }
 
     observe(time, ignore_first = true) {
         if(ignore_first) {
+            this.ignore_emit = true;
             this.CheckSessons();
         };
         if(this.intervalId == null) {
@@ -45,14 +46,14 @@ class SessonsObserver  extends EventEmitter {
 
             this.Priv_sessons = SessionInfos;
 
-            newSessons.forEach((element) => {
-                this.target_name.forEach((tn) => {
-                    if(element.Name == tn) {
+            if(!this.ignore_emit){
+                newSessons.forEach((element) => {
                         this.emit("detectNewTarget", element);
-                        return false;
-                    }
-                });
-            });
+                    });
+            }
+            else{
+                this.ignore_emit = false;
+            }
         })
     }
 }
