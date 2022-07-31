@@ -65,7 +65,7 @@ function  sendSessonInfo(userid, sesson){
                 try {
                     await user.send({ embeds: [msg]});
                 } catch (error) {
-                    console.error(error);
+                    if(DEBUG)console.error(error);
                 }
         });
     });
