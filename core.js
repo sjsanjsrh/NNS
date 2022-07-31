@@ -41,9 +41,9 @@ neos.on("login",(obj) => {
     so.observe(3000);
 });
 
-function sendSessonInfo(userid, sesson){
+function  sendSessonInfo(userid, sesson){
     client.users.fetch(userid, false).then((user) => {
-        neos.GetUser(sesson.HostUserId).then((Neosuser) => {
+        neos.GetUser(sesson.HostUserId).then(async (Neosuser) => {
             let icon = Neosuser.Profile.IconUrl ?
                 neos.NeosDBToHttp(Neosuser.Profile.IconUrl, null) : 
                 "https://upload.wikimedia.org/wikipedia/commons/5/55/Neos_VR_Logo.png";
@@ -63,7 +63,7 @@ function sendSessonInfo(userid, sesson){
                 .setThumbnail(thumbnail)
                 .setTimestamp(new Date(time))
                 try {
-                    user.send({ embeds: [msg]});
+                    await user.send({ embeds: [msg]});
                 } catch (error) {
                     console.error(error);
                 }
