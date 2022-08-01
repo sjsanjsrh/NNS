@@ -1,5 +1,5 @@
 const EventEmitter = require('events').EventEmitter;
-const DEBUG = true;
+const DEBUG = false;
 
 class sessionsObserver  extends EventEmitter {
     constructor(neos){

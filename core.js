@@ -316,5 +316,14 @@ commend.on("rm", (arg, message) => {
     console.log(message.author.tag + "->removed: " + JSON.stringify(res));
 });
 
+commend.on("help", (arg, message) => {
+    helpmsg = `
+/add        : add session name
+/rm         : remove session name in list
+/list       : display list of session name
+`
+    message.reply("\`\`\`"+helpmsg+"\`\`\`");
+});
+
 client.login(config.Discord.token);
 neos.Login(config.Neos.id, config.Neos.pw);
