@@ -1,8 +1,8 @@
 const Neos = require('@bombitmanbomb/neosjs');
-const SessonsObserver = require('./SessonsObserver.js');
+const sessionsObserver = require('./SessionsObserver.js');
 const neos = new Neos();
 const alias = require("./alias.json")
-const so = new SessonsObserver(neos, alias['newbie-kr']);
+const so = new sessionsObserver(neos, alias['newbie-kr']);
 const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require('discord.js');
 const config = require("./config.json")
 const client = new Client({ intents: [
@@ -82,23 +82,23 @@ neos.on("login",(obj) => {
     so.observe(3000);
 });
 
-function  sendSessonInfo(userid, sesson){
+function  sendSessionInfo(userid, session){
     client.users.fetch(userid, false).then((user) => {
-        neos.GetUser(sesson.HostUserId).then(async (Neosuser) => {
+        neos.GetUser(session.HostUserId).then(async (Neosuser) => {
             let icon = Neosuser.Profile.IconUrl ?
                 neos.NeosDBToHttp(Neosuser.Profile.IconUrl, null) : 
                 "https://upload.wikimedia.org/wikipedia/commons/5/55/Neos_VR_Logo.png";
-            let sessonName = sesson.Name;
-            let userName = sesson.HostUsername;
-            let thumbnail = sesson.Thumbnail ? 
-                neos.NeosDBToHttp(sesson.Thumbnail, null) : 
+            let sessionName = session.Name;
+            let userName = session.HostUsername;
+            let thumbnail = session.Thumbnail ? 
+                neos.NeosDBToHttp(session.Thumbnail, null) : 
                 "https://upload.wikimedia.org/wikipedia/commons/5/55/Neos_VR_Logo.png";
-            let time = sesson.SessionBeginTime;
+            let time = session.SessionBeginTime;
             let urls = "";
-            sesson.SessionURLs.forEach((url) => urls += "```"+url + "```\n");
+            session.SessionURLs.forEach((url) => urls += "```"+url + "```\n");
             let msg = new EmbedBuilder()
                 .setColor(0x00ff00)
-                .setTitle(sessonName)
+                .setTitle(sessionName)
                 .setAuthor({ name: userName, iconURL: icon})
                 .setDescription(urls)
                 .setThumbnail(thumbnail)
@@ -112,16 +112,16 @@ function  sendSessonInfo(userid, sesson){
     });
 }
 
-so.on("detectNewTarget",(sesson) => {
-    //if(DEBUG)console.log(sesson);
+so.on("detectNewTarget",(session) => {
+    //if(DEBUG)console.log(session);
 
     for(al in alias){
         alias[al].forEach((tname) => {
-            if(tname == sesson.Name){
+            if(tname == session.Name){
                 for(userid in _targetMap){
                     if(_targetMap[userid].includes(al))
                     {
-                        sendSessonInfo(userid, sesson);
+                        sendSessionInfo(userid, session);
                     }
                 }
             }
