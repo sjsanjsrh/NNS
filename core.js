@@ -5,127 +5,163 @@ const alias = require("./alias.json")
 const so = new sessionsObserver(neos, alias['newbie-kr']);
 const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require('discord.js');
 const config = require("./config.json")
-const client = new Client({ intents: [
-    GatewayIntentBits.Guilds, 
-    GatewayIntentBits.DirectMessages, 
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.DirectMessageReactions,
-    GatewayIntentBits.GuildMessageReactions,
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.DirectMessageReactions,
+        GatewayIntentBits.GuildMessageReactions,
     ], partials: [
         Partials.GuildMember,
         Partials.Message,
         Partials.Channel,
         Partials.Reaction
-    ] });
+    ]
+});
 const targetMap = require("./targetMap.json")
 const fs = require("fs")
-_targetMap = {...targetMap};
+_targetMap = { ...targetMap };
 const EventEmitter = require('events').EventEmitter;
 const commend = new EventEmitter();
 const DEBUG = false;
 
-function listToString(list, p){
+function listToString(list, p) {
     let res = "";
     list.forEach(e => {
-        res += e+p;
+        res += e + p;
     })
     return res.slice(0, -p.length);
 }
 
-function addUser(user, arg){
+function addTargetMap(user, arg) {
     let res = [];
-    if(!arg[0])
-        return res;
-    arg.forEach((al) => {
-        if(al in alias){
-            if(user in _targetMap){
-                if(!_targetMap[user].includes(al)){
-                    _targetMap[user].push(al);
+    arg.forEach((a) => {
+        if (a != "") {
+            if (user in _targetMap) {
+                if (!(_targetMap[user].includes(a))) {
+                    _targetMap[user].push(a);
+                    res.push(a);
                 }
-                res.push(al);
             }
-            else{
-                _targetMap[user] = [al];
-                res.push(al);
+            else {
+                _targetMap[user] = [a];
+                res = [a]
             }
         }
     });
+
     fs.writeFileSync("./targetMap.json", JSON.stringify(_targetMap));
-    
+
     return res;
 }
-function removeUser(user, arg){
+
+function removeTargetMap(user, arg) {
     let res = [];
-    if(user in _targetMap){
-        if(arg.length > 0){
-            arg.forEach((al) => {
-                let i = _targetMap[user].findIndex(e => e==al)
-                if(i != -1){
-                    _targetMap[user].splice(i, 1);;
-                    res.push(al);
+    if (user in _targetMap) {
+        if (arg.length > 0) {
+            arg.forEach((a) => {
+                let i = _targetMap[user].findIndex(e => e == a)
+                if (i != -1) {
+                    _targetMap[user].splice(i, 1);
+                    res.push(a);
+                    if (!(_targetMap[user][0])) {
+                        delete _targetMap[user];
+                        return false;
+                    }
                 }
             });
         }
-        else{
+        else {
             res = [..._targetMap[user]];
             delete _targetMap[user];
         }
     }
-    fs.writeFileSync("./targetMap.json", JSON.stringify(Array.from(_targetMap)));
+
+    fs.writeFileSync("./targetMap.json", JSON.stringify(_targetMap));
 
     return res;
 }
 
-neos.on("login",(obj) => {
+function addUser(user, arg) {
+    let res = [];
+    if (!arg[0])
+        return res;
+    arg.forEach((al) => {
+        if (al in alias) {
+            if (user in _targetMap) {
+                let r = addTargetMap(user, alias[al]);
+                res = res.concat(r);
+            }
+            else {
+                _targetMap[user] = alias[al];
+                res = [...alias[al]];
+            }
+        }
+    });
+
+    return res;
+}
+function removeUser(user, arg) {
+    let res = [];
+    if (!arg[0])
+        res = removeTargetMap(user, []);
+
+    arg.forEach((al) => {
+        if (al in alias) {
+            if (user in _targetMap) {
+                let r = removeTargetMap(user, alias[al])
+                res = [...res, ...r];
+            }
+        }
+    });
+
+    return res;
+}
+
+neos.on("login", (obj) => {
     console.log("login");
-    if(DEBUG)console.log(obj);
+    if (DEBUG) console.log(obj);
     so.observe(3000);
 });
 
-function  sendSessionInfo(userid, session){
+function sendSessionInfo(userid, session) {
     client.users.fetch(userid, false).then((user) => {
         neos.GetUser(session.HostUserId).then(async (Neosuser) => {
             let icon = Neosuser.Profile.IconUrl ?
-                neos.NeosDBToHttp(Neosuser.Profile.IconUrl, null) : 
+                neos.NeosDBToHttp(Neosuser.Profile.IconUrl, null) :
                 "https://upload.wikimedia.org/wikipedia/commons/5/55/Neos_VR_Logo.png";
             let sessionName = session.Name;
             let userName = session.HostUsername;
-            let thumbnail = session.Thumbnail ? 
-                neos.NeosDBToHttp(session.Thumbnail, null) : 
+            let thumbnail = session.Thumbnail ?
+                neos.NeosDBToHttp(session.Thumbnail, null) :
                 "https://upload.wikimedia.org/wikipedia/commons/5/55/Neos_VR_Logo.png";
             let time = session.SessionBeginTime;
             let urls = "";
-            session.SessionURLs.forEach((url) => urls += "```"+url + "```\n");
+            session.SessionURLs.forEach((url) => urls += "```" + url + "```\n");
             let msg = new EmbedBuilder()
                 .setColor(0x00ff00)
                 .setTitle(sessionName)
-                .setAuthor({ name: userName, iconURL: icon})
+                .setAuthor({ name: userName, iconURL: icon })
                 .setDescription(urls)
                 .setThumbnail(thumbnail)
                 .setTimestamp(new Date(time))
-                try {
-                    await user.send({ embeds: [msg]});
-                } catch (error) {
-                    if(DEBUG)console.error(error);
-                }
+            try {
+                await user.send({ embeds: [msg] });
+            } catch (error) {
+                if (DEBUG) console.error(error);
+            }
         });
     });
 }
 
-so.on("detectNewTarget",(session) => {
+so.on("detectNewTarget", (session) => {
     //if(DEBUG)console.log(session);
 
-    for(al in alias){
-        alias[al].forEach((tname) => {
-            if(tname == session.Name){
-                for(userid in _targetMap){
-                    if(_targetMap[userid].includes(al))
-                    {
-                        sendSessionInfo(userid, session);
-                    }
-                }
-            }
-        });
+    for (userid in _targetMap) {
+        if (_targetMap[userid].includes(session.Name)) {
+            sendSessionInfo(userid, session);
+        }
     }
 });
 
@@ -140,15 +176,13 @@ client.on('ready', () => {
 });
 
 client.on("messageCreate", message => {
-    if(message.author.id != client.user.id)
-    {
-        if(message.content.length > 0){
-            if(message.content.charAt(0) == "/")
-            {
+    if (message.author.id != client.user.id) {
+        if (message.content.length > 0) {
+            if (message.content.charAt(0) == "/") {
                 let arg = message.content.substr(1).split(" ");
                 arg = arg.filter((e) => e != '');
-                if(arg.length > 0){
-                    if(DEBUG)console.log(message.author.tag+" : "+message.content);
+                if (arg.length > 0) {
+                    if (DEBUG) console.log(message.author.tag + " : " + message.content);
                     commend.emit(arg[0], arg, message);
                 }
             }
@@ -156,45 +190,131 @@ client.on("messageCreate", message => {
     }
 });
 
-function help_alias(){
-    return listToString(Object.keys(alias)," | ");
+function reply_help_alias(arg, message) {
+    let msg = new EmbedBuilder()
+        .setColor(0x0000ff).
+        setDescription(`\`\`\`/${arg[0]} ${arg[1]} [ ${listToString(Object.keys(alias), " | ")} ]\`\`\``);
+    for (key in alias) {
+        msg.addFields({ name: key, value: listToString(alias[key], "\n"), inline: true })
+    }
+    message.reply({ embeds: [msg] });
 }
 
-commend.on("target",  (arg, message) => {
+commend.on("list", (arg, message) => {
     message.author.id in _targetMap ?
-    message.reply(`[ ${listToString(_targetMap[message.author.id], ", ")} ]`):
-    message.reply(`undefind`);
+        message.reply("\`" + JSON.stringify(_targetMap[message.author.id]) + "\`") :
+        message.reply(`undefind`);
 
 })
 
-commend.on("add", (arg, message) => {
-    let res = addUser(message.author.id, arg.slice(1));
-    if(res.length > 0){
-        message.reply("added: [ "+listToString(res, ", ")+" ]");
-        console.log(message.author.tag+"->added: [ "+listToString(res, ", ")+" ]");
-    }
-    else{
-        let msg = new EmbedBuilder()
-        .setColor(0x0000ff).
-        setDescription(`\`\`\`/${arg[0]} [ ${help_alias()} ]\`\`\``);
-        for(key in alias){
-            msg.addFields({ name: key, value: listToString(alias[key],"\n"), inline: true })
+function try_reply_help(arg, message){
+    let found = false;
+    arg.forEach(e => {
+        if (e in alias) {
+            found = true;
+            return false;
         }
-        message.reply({ embeds: [msg]});
+    });
+
+    if (!found) {
+        reply_help_alias(arg, message);
+        return true;
     }
+    return false;
+}
+
+const option = /^-[^s-]$/;
+
+commend.on("add", (arg, message) => {
+    helpmsg = `
+/${arg[0]} <session name>   : add list <session name>
+/${arg[0]} -l <alias>       : type '/${arg[0]} -l' is help.
+/${arg[0]} -j <json>        : add list json array
+`
+    let res;
+    let user = message.author.id;
+    if (option.test(arg[1])) {
+        if (arg[1] == "-l") {
+            res = addUser(user, arg.slice(2));
+
+            if ((res.length <= 0)) {
+                if(try_reply_help(arg, message))return;
+            }
+        }
+        else if (arg[1] == "-j") {
+            let opt = "-j"
+            let pos = message.content.indexOf(opt) + opt.length + 1;
+            let str = message.content.slice(pos, message.content.length)
+            let list = JSON.parse[str];
+            if(list[0]) addTargetMap(user, list);
+        }
+        else {
+            message.reply("\`\`\`"+helpmsg+"\`\`\`");
+            return;
+        }
+    }
+    else {
+        let str = message.content.slice(arg[0].length + 2, message.content.length)
+        if(str == ""){
+            message.reply("\`\`\`"+helpmsg+"\`\`\`");
+            return;
+        }
+        else{
+            res = addTargetMap(user, [str]);
+        }
+    }
+
+    message.reply("added: `" + JSON.stringify(res) + "`");
+    console.log(message.author.tag + "->added: " + JSON.stringify(res));
 });
 
-commend.on("remove", (arg, message) => {
-    let res = removeUser(message.author.id, arg.slice(1));
-    if(res.length > 0){
-        message.reply("removed: [ "+listToString(res, ", ")+" ]");
-        console.log(message.author.tag+"->removed: [ "+listToString(res, ", ")+" ]");
+commend.on("rm", (arg, message) => {
+    helpmsg = `
+/${arg[0]} -a               : remove all
+/${arg[0]} <session name>   : remove session name in list
+/${arg[0]} -l <alias>       : type '/${arg[0]} -l' is help.
+/${arg[0]} -j <json>        : remove json array in list
+`
+    let res;
+    let user = message.author.id;
+    if (option.test(arg[1])) {
+        if (arg[1] == "-a") {
+            res = removeUser(user, []);
+        }
+        else if (arg[1] == "-l") {
+            if(arg[2]){
+                res = removeUser(user, arg.slice(2));
+            }
+            else{
+                if(try_reply_help(arg, message))return;
+            }
+        }
+        else if (arg[1] == "-j") {
+            let opt = "-j"
+            let pos = message.content.indexOf(opt) + opt.length + 1;
+            let str = message.content.slice(pos, message.content.length)
+            let list = JSON.parse[str];
+            if(list[0]) removeTargetMap(user, list);
+        }
+        else {
+            message.reply("\`\`\`"+helpmsg+"\`\`\`");
+            return;
+        }
     }
     else{
-        message.reply(`undefind`);
+        let str = message.content.slice(arg[0].length + 2, message.content.length)
+        if(str == ""){
+            message.reply("\`\`\`"+helpmsg+"\`\`\`");
+            return;
+        }
+        else{
+            res = removeTargetMap(user, [str]);
+        }
     }
+
+    message.reply("removed: `" + JSON.stringify(res) + "`");
+    console.log(message.author.tag + "->removed: " + JSON.stringify(res));
 });
 
 client.login(config.Discord.token);
-neos.Login(config.Neos.id, config.Neos.pw)
-
+neos.Login(config.Neos.id, config.Neos.pw);
