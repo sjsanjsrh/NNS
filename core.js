@@ -18,10 +18,8 @@ const client = new Client({ intents: [
         Partials.Reaction
     ] });
 const userList = require("./userList.json");
-const targetMap = require("./targetMap.json")
 const fs = require("fs")
 _userList = new Set(userList);
-_targetMap = new Map(targetMap);
 const EventEmitter = require('events').EventEmitter;
 const commend = new EventEmitter();
 const DEBUG = false;
