@@ -29,7 +29,9 @@ class SessonsObserver  extends EventEmitter {
 
     CheckSessons() {
         this.neos.CloudXInterface.GetSessions().then(res => {
-            let SessionInfos = res.Content;
+            let SessionInfos = res.Content.filter((t) => {
+                t.SessionUsers.length != 0;
+            });;
 
             let newSessons = SessionInfos.filter((t) => {
                 let found = false;
