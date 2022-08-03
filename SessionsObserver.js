@@ -1,5 +1,6 @@
 const EventEmitter = require('events').EventEmitter;
-const DEBUG = false;
+const config = require("./config.json")
+const DEBUG = config.debug.SessionsObserver;
 
 class sessionsObserver  extends EventEmitter {
     constructor(neos){
@@ -30,7 +31,7 @@ class sessionsObserver  extends EventEmitter {
     CheckSessions() {
         this.neos.CloudXInterface.GetSessions().then(res => {
             let SessionInfos = res.Content.filter((t) => {
-                t.SessionUsers.length != 0;
+                return t.ActiveUsers.length != 0;
             });
 
             let newsessions = SessionInfos.filter((t) => {

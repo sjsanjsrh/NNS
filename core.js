@@ -3,7 +3,7 @@ const sessionsObserver = require('./SessionsObserver.js');
 const neos = new Neos();
 const alias = require("./alias.json")
 const so = new sessionsObserver(neos, alias['newbie-kr']);
-const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, EmbedBuilder ,ActivityType} = require('discord.js');
 const config = require("./config.json")
 const client = new Client({
     intents: [
@@ -20,11 +20,14 @@ const client = new Client({
     ]
 });
 const targetMap = require("./targetMap.json")
-const fs = require("fs")
+const fs = require("fs");
+const { debug } = require('console');
 _targetMap = { ...targetMap };
 const EventEmitter = require('events').EventEmitter;
 const commend = new EventEmitter();
-const DEBUG = false;
+const DEBUG = config.debug.core;
+
+const undefind_msg = "You did not add a session name"
 
 function listToString(list, p) {
     let res = "";
@@ -34,18 +37,22 @@ function listToString(list, p) {
     return res.slice(0, -p.length);
 }
 
+function targetMapArgsInit(a){
+    return {mute: false, list: a}
+}
+
 function addTargetMap(user, arg) {
     let res = [];
     arg.forEach((a) => {
         if (a != "") {
             if (user in _targetMap) {
-                if (!(_targetMap[user].includes(a))) {
-                    _targetMap[user].push(a);
+                if (!(_targetMap[user].list.includes(a))) {
+                    _targetMap[user].list.push(a);
                     res.push(a);
                 }
             }
             else {
-                _targetMap[user] = [a];
+                _targetMap[user] = targetMapArgsInit([a]);
                 res = [a]
             }
         }
@@ -61,11 +68,11 @@ function removeTargetMap(user, arg) {
     if (user in _targetMap) {
         if (arg.length > 0) {
             arg.forEach((a) => {
-                let i = _targetMap[user].findIndex(e => e == a)
+                let i = _targetMap[user].list.findIndex(e => e == a)
                 if (i != -1) {
-                    _targetMap[user].splice(i, 1);
+                    _targetMap[user].list.splice(i, 1);
                     res.push(a);
-                    if (!(_targetMap[user][0])) {
+                    if (!(_targetMap[user].list[0])) {
                         delete _targetMap[user];
                         return false;
                     }
@@ -94,8 +101,10 @@ function addUser(user, arg) {
                 res = res.concat(r);
             }
             else {
-                _targetMap[user] = alias[al];
+                _targetMap[user] = targetMapArgsInit(alias[al]);
                 res = [...alias[al]];
+                
+                fs.writeFileSync("./targetMap.json", JSON.stringify(_targetMap));
             }
         }
     });
@@ -139,6 +148,7 @@ function sendSessionInfo(userid, session) {
             let time = session.SessionBeginTime;
             let urls = "";
             session.SessionURLs.forEach((url) => urls += "```" + url + "```\n");
+            let sessionUsers = session.SessionUsers;
             let msg = new EmbedBuilder()
                 .setColor(0x00ff00)
                 .setTitle(sessionName)
@@ -159,13 +169,19 @@ so.on("detectNewTarget", (session) => {
     //if(DEBUG)console.log(session);
 
     for (userid in _targetMap) {
-        if (_targetMap[userid].includes(session.Name)) {
+        let t = _targetMap[userid];
+        if ((!t.mute) && (t.list.includes(session.Name))) {
             sendSessionInfo(userid, session);
         }
     }
 });
 
 client.on('ready', () => {
+    let res = client.user.setActivity("DM '/help' for help",{
+        type: ActivityType.Custom
+    });
+    if(DEBUG)console.log(res);
+
     console.log(`Logged in as ${client.user.tag}!`);
 
     // client.guilds.fetch('1003099200453607526').then((guild)=>{
@@ -203,7 +219,7 @@ function reply_help_alias(arg, message) {
 commend.on("list", (arg, message) => {
     message.author.id in _targetMap ?
         message.reply("\`" + JSON.stringify(_targetMap[message.author.id]) + "\`") :
-        message.reply(`undefind`);
+        message.reply(undefind_msg);
 
 })
 
@@ -321,8 +337,33 @@ commend.on("help", (arg, message) => {
 /add        : add session name
 /rm         : remove session name in list
 /list       : display list of session name
+/mute       : stop sending messages
+/unmute     : resume sending messages
 `
     message.reply("\`\`\`"+helpmsg+"\`\`\`");
+});
+
+commend.on("mute", (arg, message) => {
+    let user = message.author.id;
+    if (user in _targetMap) {
+        _targetMap[user].mute = true;
+        fs.writeFileSync("./targetMap.json", JSON.stringify(_targetMap));
+        message.reply("Stop sending messages");
+    }
+    else{
+        message.reply(undefind_msg);
+    }
+});
+commend.on("unmute", (arg, message) => {
+    let user = message.author.id;
+    if (user in _targetMap) {
+        _targetMap[user].mute = false;
+        fs.writeFileSync("./targetMap.json", JSON.stringify(_targetMap));
+        message.reply("Resume sending messages");
+    }
+    else{
+        message.reply(undefind_msg);
+    }
 });
 
 client.login(config.Discord.token);

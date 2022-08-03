@@ -1,6 +1,6 @@
 {
     "newbie-kr": ["NEOS 한국 튜토리얼", "Metaverse Training Center [ko]", "Metaverse Training Center [ko-kr]"],
-    "newbie-jp": ["JP チュートリアルワールド", "Metaverse Training Center [jp]"],
-    "newbie-en": ["Metaverse Training Center", "Metaverse Training Center [en-US]","Metaverse Training Center [en-AU]"],
+    "newbie-jp": ["JP チュートリアルワールド", "Metaverse Training Center [jp]", "Metaverse Training Center [ja-JP]"],
+    "newbie-en": ["Metaverse Training Center", "Metaverse Training Center [en]", "Metaverse Training Center [en-US]","Metaverse Training Center [en-AU]"],
     "misc": ["The Avatar Station", "Neos Hub"]
 }
