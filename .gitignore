@@ -133,5 +133,5 @@ dist
 package-lock.json
 userList.json
 config.json
-NNS.service
+NNS*.service
 targetMap.json
