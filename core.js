@@ -80,7 +80,7 @@ function removeTargetMap(user, arg) {
             });
         }
         else {
-            res = [..._targetMap[user]];
+            res = [..._targetMap[user].list];
             delete _targetMap[user];
         }
     }
@@ -261,8 +261,9 @@ commend.on("add", (arg, message) => {
             let opt = "-j"
             let pos = message.content.indexOf(opt) + opt.length + 1;
             let str = message.content.slice(pos, message.content.length)
-            let list = JSON.parse[str];
-            if(list[0]) addTargetMap(user, list);
+            let list = Array.from(JSON.parse(str));
+            if(list[0]) res = addTargetMap(user, list);
+            
         }
         else {
             message.reply("\`\`\`"+helpmsg+"\`\`\`");
@@ -309,8 +310,8 @@ commend.on("rm", (arg, message) => {
             let opt = "-j"
             let pos = message.content.indexOf(opt) + opt.length + 1;
             let str = message.content.slice(pos, message.content.length)
-            let list = JSON.parse[str];
-            if(list[0]) removeTargetMap(user, list);
+            let list = Array.from(JSON.parse(str));
+            if(list[0]) res = removeTargetMap(user, list);
         }
         else {
             message.reply("\`\`\`"+helpmsg+"\`\`\`");
