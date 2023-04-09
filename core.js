@@ -147,7 +147,7 @@ function sendSessionInfo(userid, session) {
                 "https://upload.wikimedia.org/wikipedia/commons/5/55/Neos_VR_Logo.png";
             let time = session.SessionBeginTime;
             let urls = "";
-            session.SessionURLs.forEach((url) => urls += "```" + url + "```\n");
+            urls = "http://cloudx.azurewebsites.net/open/session/"+session.SessionId;
             let sessionUsers = session.SessionUsers;
             let msg = new EmbedBuilder()
                 .setColor(0x00ff00)
